@@ -1,0 +1,10 @@
+{
+    "window_width": 800,
+    "window_height": 418,
+    "window_top": 62,
+    "window_left": 0,
+    "units": "F",
+    "frequency_unit": "sec",
+    "log_interval": 5,
+    "sensor_map": {}
+}

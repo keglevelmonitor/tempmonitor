@@ -1,0 +1,4 @@
+kivy
+kivy_garden.graph
+w1thermsensor
+matplotlib

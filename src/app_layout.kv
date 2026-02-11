@@ -1,0 +1,288 @@
+#:import Graph kivy_garden.graph.Graph
+#:import ResponsiveGraph __main__.ResponsiveGraph
+
+ScreenManager:
+    id: screen_manager
+    MonitorScreen:
+        name: 'monitor'
+    SettingsScreen:
+        name: 'settings'
+    ChartScreen:
+        name: 'chart'
+
+<MonitorScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+        
+        # --- HERO AREA ---
+        BoxLayout:
+            orientation: 'horizontal'
+            spacing: 10
+            size_hint_y: 0.85 
+            
+            # PRODUCT CARD
+            BoxLayout:
+                orientation: 'vertical'
+                canvas.before:
+                    Color:
+                        rgba: 0.2, 0.2, 0.2, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+                
+                Label:
+                    text: "PRODUCT"
+                    size_hint_y: 0.15
+                    font_size: self.height * 0.5
+                    color: 1, 1, 1, 1
+                
+                Label:
+                    text: app.product_temp
+                    size_hint_y: 0.5
+                    font_size: self.height * 0.8
+                    bold: True
+                    color: 1, 1, 0, 1
+                
+                Label:
+                    text: app.product_range
+                    size_hint_y: 0.15
+                    font_size: self.height * 0.6
+                    color: 1, 1, 0, 1
+                    text_size: self.size
+                    halign: 'center'
+                    valign: 'top'
+                
+                Spinner:
+                    id: spinner_product
+                    size_hint_y: 0.2
+                    text: app.sensor_ids[0] if app.sensor_ids else "No Sensor"
+                    values: app.sensor_ids
+                    on_text: app.refresh_graph_mapping()
+                    font_size: self.height * 0.4
+
+            # AMBIENT CARD
+            BoxLayout:
+                orientation: 'vertical'
+                canvas.before:
+                    Color:
+                        rgba: 0.2, 0.2, 0.2, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+                
+                Label:
+                    text: "AMBIENT"
+                    size_hint_y: 0.15
+                    font_size: self.height * 0.5
+                    color: 1, 1, 1, 1
+                
+                Label:
+                    text: app.ambient_temp
+                    size_hint_y: 0.5
+                    font_size: self.height * 0.8
+                    bold: True
+                    color: 0, 1, 0, 1
+                
+                Label:
+                    text: app.ambient_range
+                    size_hint_y: 0.15
+                    font_size: self.height * 0.6
+                    color: 0, 1, 0, 1
+                    text_size: self.size
+                    halign: 'center'
+                    valign: 'top'
+                
+                Spinner:
+                    id: spinner_ambient
+                    size_hint_y: 0.2
+                    text: app.sensor_ids[1] if len(app.sensor_ids) > 1 else (app.sensor_ids[0] if app.sensor_ids else "No Sensor")
+                    values: app.sensor_ids
+                    on_text: app.refresh_graph_mapping()
+                    font_size: self.height * 0.4
+
+        # --- MAIN CONTROLS ---
+        BoxLayout:
+            size_hint_y: 0.15
+            spacing: 10
+            
+            Button:
+                text: "SETTINGS"
+                font_size: self.height * 0.5
+                on_release: 
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'settings'
+            
+            Button:
+                text: "CHART"
+                font_size: self.height * 0.5
+                on_release: 
+                    root.manager.transition.direction = 'left'
+                    root.manager.current = 'chart'
+
+<SettingsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+        canvas.before:
+            Color:
+                rgba: 0.15, 0.15, 0.15, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        # --- TITLE (15% Height) ---
+        Label:
+            text: "SETTINGS"
+            size_hint_y: 0.15
+            font_size: self.height * 0.5
+            bold: True
+            color: 1, 1, 1, 1
+
+        # --- SETTING 1: TEMP UNITS (15% Height) ---
+        BoxLayout:
+            size_hint_y: 0.15
+            orientation: 'horizontal'
+            spacing: 10
+            
+            Label:
+                text: "Temp Units:"
+                size_hint_x: 0.6
+                text_size: self.size
+                halign: 'right'
+                valign: 'middle'
+                font_size: self.height * 0.5
+                color: 1, 1, 1, 1
+            
+            Spinner:
+                size_hint_x: 0.4
+                text: "Celsius" if app.units == 'C' else "Fahrenheit"
+                values: ["Celsius", "Fahrenheit"]
+                font_size: self.height * 0.5
+                on_text: app.set_units('C' if self.text == 'Celsius' else 'F')
+
+        # --- SETTING 2: FREQ UNITS (15% Height) ---
+        BoxLayout:
+            size_hint_y: 0.15
+            orientation: 'horizontal'
+            spacing: 10
+            
+            Label:
+                text: "Log Units:"
+                size_hint_x: 0.6
+                text_size: self.size
+                halign: 'right'
+                valign: 'middle'
+                font_size: self.height * 0.5
+                color: 1, 1, 1, 1
+            
+            Spinner:
+                size_hint_x: 0.4
+                text: "Minutes" if app.frequency_unit == 'min' else "Seconds"
+                values: ["Minutes", "Seconds"]
+                font_size: self.height * 0.5
+                on_text: app.set_frequency_unit('min' if self.text == 'Minutes' else 'sec')
+
+        # --- SETTING 3: RESET DATA (15% Height) ---
+        BoxLayout:
+            size_hint_y: 0.15
+            orientation: 'horizontal'
+            spacing: 10
+            
+            Label:
+                text: "Reset Data Log:"
+                size_hint_x: 0.6
+                text_size: self.size
+                halign: 'right'
+                valign: 'middle'
+                font_size: self.height * 0.5
+                color: 1, 1, 1, 1
+            
+            Button:
+                size_hint_x: 0.4
+                text: app.reset_btn_text
+                background_color: app.reset_btn_color
+                # Slightly smaller font to ensure "CONFIRM..." fits nicely
+                font_size: self.height * 0.45 
+                on_release: app.on_reset_click()
+
+        # --- SPACER (Adjusted to 25% to fit new row) ---
+        Widget:
+            size_hint_y: 0.25
+
+        # --- BOTTOM BUTTON (15% Height) ---
+        Button:
+            text: "EXIT TO MAIN DISPLAY"
+            size_hint_y: 0.15
+            font_size: self.height * 0.5
+            on_release: 
+                root.manager.transition.direction = 'left'
+                root.manager.current = 'monitor'
+<ChartScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+
+        # --- GRAPH AREA ---
+        BoxLayout:
+            size_hint_y: 0.85
+            canvas.before:
+                Color:
+                    rgba: 0.1, 0.1, 0.1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            
+            ResponsiveGraph:
+                id: main_graph
+                xlabel: 'Time'
+                ylabel: 'Temp'
+                x_ticks_minor: 5
+                x_ticks_major: 25
+                y_ticks_major: 1
+                y_grid_label: True
+                y_func_label: lambda x: "{:.1f}".format(x)
+                padding: 5
+                x_grid: True
+                y_grid: True
+                xmin: 0
+                xmax: 100
+                ymin: 0
+                ymax: 40
+                label_options: {'color': [1, 1, 1, 1], 'bold': True}
+
+        # --- CONTROL AREA ---
+        BoxLayout:
+            size_hint_y: 0.15
+            spacing: 20
+            
+            Button:
+                text: "EXIT"
+                size_hint_x: 0.2
+                font_size: self.height * 0.5
+                on_release: 
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'monitor'
+            
+            BoxLayout:
+                size_hint_x: 0.8
+                orientation: 'vertical'
+                Label:
+                    text: "Freq: " + str(int(freq_slider.value)) + " " + app.frequency_unit
+                    size_hint_y: 0.4
+                    font_size: self.height * 0.8
+                    halign: 'left'
+                    valign: 'middle'
+                    text_size: self.size
+                
+                Slider:
+                    id: freq_slider
+                    size_hint_y: 0.6
+                    min: 5
+                    max: 120
+                    step: 5
+                    value: app.log_interval
+                    on_value: app.update_log_interval(self.value)
