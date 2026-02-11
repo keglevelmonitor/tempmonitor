@@ -47,7 +47,11 @@ fi
 
 echo "Installing/Updating Python requirements..."
 "$VENV_PYTHON_EXEC" -m pip install --upgrade pip setuptools wheel
-"$VENV_PYTHON_EXEC" -m pip install kivy[full]
+"$VENV_PYTHON_EXEC" -m pip install -r requirements.txt
+# "$VENV_PYTHON_EXEC" -m pip install kivy[full]
+# "$VENV_PYTHON_EXEC" -m pip install kivy_garden.graph
+# "$VENV_PYTHON_EXEC" -m pip install w1thermsensor
+# "$VENV_PYTHON_EXEC" -m pip install matplotlib
 
 # --- 4. Create Desktop Shortcut ---
 echo ""
