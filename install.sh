@@ -88,7 +88,7 @@ Exec=$VENV_PYTHON_EXEC $PROJECT_DIR/src/main.py
 Icon=$PROJECT_DIR/src/assets/thermometer.png
 Terminal=false
 StartupNotify=true
-Categories=Utility;
+Categories=Application;Other;
 StartupWMClass=TempMonitor
 EOF
 fi

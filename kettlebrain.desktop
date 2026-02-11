@@ -8,5 +8,5 @@ Exec=/home/raspberrypi/tempmonitor/venv/bin/python /home/raspberrypi/tempmonitor
 Icon=/home/raspberrypi/tempmonitor/src/assets/thermometer.png
 Terminal=false
 StartupNotify=true
-Categories=X-Other;
+Categories=Other;
 StartupWMClass=TempMonitor
