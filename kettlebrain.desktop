@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=TempMonitor
+Comment=Raspberry Pi Temperature Monitor
+Path=/home/raspberrypi/tempmonitor/src
+Exec=/home/raspberrypi/tempmonitor/venv/bin/python /home/raspberrypi/tempmonitor/src/main.py
+Icon=/home/raspberrypi/tempmonitor/src/assets/thermometer.png
+Terminal=false
+StartupNotify=true
+Categories=X-Other;
+StartupWMClass=TempMonitor
