@@ -284,12 +284,15 @@ class UpdatesSettingsScreen(Screen):
         def _reset(dt):
             self.is_working = False
             self.install_enabled = enable_install
-            # Update parent button text
-            master = self.parent.parent
-            if enable_install:
-                master.btn_3_text = "INSTALL"
-            else:
-                master.btn_3_text = "CHECK"
+            
+            # Safely fetch the master screen via the app root instead of fragile .parent chains
+            app = App.get_running_app()
+            if app and app.root and app.root.has_screen('sys_settings'):
+                master = app.root.get_screen('sys_settings')
+                if enable_install:
+                    master.btn_3_text = "INSTALL"
+                else:
+                    master.btn_3_text = "CHECK"
         Clock.schedule_once(_reset)
 
     def restart_app(self):
