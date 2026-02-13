@@ -5,8 +5,8 @@ ScreenManager:
     id: screen_manager
     MonitorScreen:
         name: 'monitor'
-    SettingsScreen:
-        name: 'settings'
+    SettingsMasterScreen:
+        name: 'sys_settings'
     ChartScreen:
         name: 'chart'
 
@@ -40,27 +40,19 @@ ScreenManager:
                 
                 Label:
                     text: app.product_temp
-                    size_hint_y: 0.5
+                    size_hint_y: 0.65
                     font_size: self.height * 0.8
                     bold: True
                     color: 1, 1, 0, 1
                 
                 Label:
                     text: app.product_range
-                    size_hint_y: 0.15
-                    font_size: self.height * 0.6
+                    size_hint_y: 0.2
+                    font_size: self.height * 0.5
                     color: 1, 1, 0, 1
                     text_size: self.size
                     halign: 'center'
                     valign: 'top'
-                
-                Spinner:
-                    id: spinner_product
-                    size_hint_y: 0.2
-                    text: app.sensor_ids[0] if app.sensor_ids else "No Sensor"
-                    values: app.sensor_ids
-                    on_text: app.refresh_graph_mapping()
-                    font_size: self.height * 0.4
 
             # AMBIENT CARD
             BoxLayout:
@@ -80,27 +72,19 @@ ScreenManager:
                 
                 Label:
                     text: app.ambient_temp
-                    size_hint_y: 0.5
+                    size_hint_y: 0.65
                     font_size: self.height * 0.8
                     bold: True
                     color: 0, 1, 0, 1
-                
+            
                 Label:
                     text: app.ambient_range
-                    size_hint_y: 0.15
-                    font_size: self.height * 0.6
+                    size_hint_y: 0.2
+                    font_size: self.height * 0.5
                     color: 0, 1, 0, 1
                     text_size: self.size
                     halign: 'center'
                     valign: 'top'
-                
-                Spinner:
-                    id: spinner_ambient
-                    size_hint_y: 0.2
-                    text: app.sensor_ids[1] if len(app.sensor_ids) > 1 else (app.sensor_ids[0] if app.sensor_ids else "No Sensor")
-                    values: app.sensor_ids
-                    on_text: app.refresh_graph_mapping()
-                    font_size: self.height * 0.4
 
         # --- MAIN CONTROLS ---
         BoxLayout:
@@ -112,7 +96,7 @@ ScreenManager:
                 font_size: self.height * 0.5
                 on_release: 
                     root.manager.transition.direction = 'right'
-                    root.manager.current = 'settings'
+                    root.manager.current = 'sys_settings'
             
             Button:
                 text: "CHART"
@@ -121,105 +105,314 @@ ScreenManager:
                     root.manager.transition.direction = 'left'
                     root.manager.current = 'chart'
 
-<SettingsScreen>:
+# --- NEW TABBED SETTINGS MASTER ---
+<SettingsMasterScreen>:
     BoxLayout:
         orientation: 'vertical'
-        padding: 10
-        spacing: 10
+        padding: 5
+        spacing: 5
         canvas.before:
             Color:
-                rgba: 0.15, 0.15, 0.15, 1
+                rgba: 0.1, 0.1, 0.1, 1
             Rectangle:
                 pos: self.pos
                 size: self.size
 
-        # --- TITLE (15% Height) ---
-        Label:
-            text: "SETTINGS"
-            size_hint_y: 0.15
-            font_size: self.height * 0.5
-            bold: True
-            color: 1, 1, 1, 1
-
-        # --- SETTING 1: TEMP UNITS (15% Height) ---
+        # --- 1. TOP TABS (15% Height) ---
         BoxLayout:
             size_hint_y: 0.15
-            orientation: 'horizontal'
-            spacing: 10
+            spacing: 2
             
+            ToggleButton:
+                text: "GENERAL"
+                group: 'settings_tabs'
+                state: 'down'
+                allow_no_selection: False
+                font_size: self.height * 0.4
+                bold: True
+                on_release: root.select_tab('settings_general')
+            ToggleButton:
+                text: "UPDATES"
+                group: 'settings_tabs'
+                allow_no_selection: False
+                font_size: self.height * 0.4
+                bold: True
+                on_release: root.select_tab('settings_updates')
+            ToggleButton:
+                text: "ABOUT"
+                group: 'settings_tabs'
+                allow_no_selection: False
+                font_size: self.height * 0.4
+                bold: True
+                on_release: root.select_tab('settings_about')
+
+        # --- 2. CONTENT AREA (70% Height) ---
+        ScreenManager:
+            id: content_manager
+            size_hint_y: 0.70
+            
+            GeneralSettingsScreen:
+                id: view_general
+                name: 'settings_general'
+            UpdatesSettingsScreen:
+                id: view_updates
+                name: 'settings_updates'
+            AboutScreen:
+                id: view_about
+                name: 'settings_about'
+
+        # --- 3. FOOTER BUTTONS (15% Height) ---
+        BoxLayout:
+            size_hint_y: 0.15
+            spacing: 10
+            padding: [0, 5, 0, 0]
+
+            Button:
+                text: "EXIT"
+                font_size: self.height * 0.5
+                bold: True
+                background_color: 0.5, 0.5, 0.5, 1
+                on_release: root.exit_settings()
+
+            Button:
+                text: "HELP"
+                font_size: self.height * 0.5
+                bold: True
+                background_color: 0.3, 0.3, 0.3, 1
+                on_release: root.show_help()
+
+            Button:
+                text: root.btn_3_text
+                font_size: self.height * 0.5
+                bold: True
+                disabled: not root.btn_3_visible
+                opacity: 1 if root.btn_3_visible else 0
+                background_color: 0.2, 0.4, 0.8, 1
+                on_release: root.on_btn_3()
+
+            Button:
+                text: root.btn_4_text
+                font_size: self.height * 0.5
+                bold: True
+                disabled: not root.btn_4_visible
+                opacity: 1 if root.btn_4_visible else 0
+                background_color: 0.8, 0.4, 0.2, 1
+                on_release: root.on_btn_4()
+
+<GeneralSettingsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: [10, 0, 10, 0]
+        spacing: 5
+        
+        # ROW 1: TEMP UNITS
+        BoxLayout:
+            size_hint_y: 0.2
+            spacing: 10
             Label:
                 text: "Temp Units:"
-                size_hint_x: 0.6
+                size_hint_x: 0.5
                 text_size: self.size
                 halign: 'right'
                 valign: 'middle'
                 font_size: self.height * 0.5
-                color: 1, 1, 1, 1
-            
             Spinner:
-                size_hint_x: 0.4
+                size_hint_x: 0.5
                 text: "Celsius" if app.units == 'C' else "Fahrenheit"
                 values: ["Celsius", "Fahrenheit"]
                 font_size: self.height * 0.5
                 on_text: app.set_units('C' if self.text == 'Celsius' else 'F')
 
-        # --- SETTING 2: FREQ UNITS (15% Height) ---
+        # ROW 2: LOG UNITS
         BoxLayout:
-            size_hint_y: 0.15
-            orientation: 'horizontal'
+            size_hint_y: 0.2
             spacing: 10
-            
             Label:
                 text: "Log Units:"
-                size_hint_x: 0.6
+                size_hint_x: 0.5
                 text_size: self.size
                 halign: 'right'
                 valign: 'middle'
                 font_size: self.height * 0.5
-                color: 1, 1, 1, 1
-            
             Spinner:
-                size_hint_x: 0.4
+                size_hint_x: 0.5
                 text: "Minutes" if app.frequency_unit == 'min' else "Seconds"
                 values: ["Minutes", "Seconds"]
                 font_size: self.height * 0.5
                 on_text: app.set_frequency_unit('min' if self.text == 'Minutes' else 'sec')
 
-        # --- SETTING 3: RESET DATA (15% Height) ---
+        # ROW 3: SENSOR PRODUCT
         BoxLayout:
-            size_hint_y: 0.15
-            orientation: 'horizontal'
+            size_hint_y: 0.2
             spacing: 10
-            
             Label:
-                text: "Reset Data Log:"
-                size_hint_x: 0.6
+                text: "Product Sensor:"
+                size_hint_x: 0.5
                 text_size: self.size
                 halign: 'right'
                 valign: 'middle'
                 font_size: self.height * 0.5
-                color: 1, 1, 1, 1
-            
+            Spinner:
+                id: spinner_product
+                size_hint_x: 0.5
+                text: app.sensor_ids[0] if app.sensor_ids else "No Sensor"
+                values: app.sensor_ids
+                on_text: app.refresh_graph_mapping()
+                font_size: self.height * 0.4
+
+        # ROW 4: SENSOR AMBIENT
+        BoxLayout:
+            size_hint_y: 0.2
+            spacing: 10
+            Label:
+                text: "Ambient Sensor:"
+                size_hint_x: 0.5
+                text_size: self.size
+                halign: 'right'
+                valign: 'middle'
+                font_size: self.height * 0.5
+            Spinner:
+                id: spinner_ambient
+                size_hint_x: 0.5
+                text: app.sensor_ids[1] if len(app.sensor_ids) > 1 else (app.sensor_ids[0] if app.sensor_ids else "No Sensor")
+                values: app.sensor_ids
+                on_text: app.refresh_graph_mapping()
+                font_size: self.height * 0.4
+
+        # ROW 5: RESET LOG
+        BoxLayout:
+            size_hint_y: 0.2
+            spacing: 10
+            Label:
+                text: "Reset Data Log:"
+                size_hint_x: 0.5
+                text_size: self.size
+                halign: 'right'
+                valign: 'middle'
+                font_size: self.height * 0.5
             Button:
-                size_hint_x: 0.4
+                size_hint_x: 0.5
                 text: app.reset_btn_text
                 background_color: app.reset_btn_color
-                # Slightly smaller font to ensure "CONFIRM..." fits nicely
                 font_size: self.height * 0.45 
                 on_release: app.on_reset_click()
 
-        # --- SPACER (Adjusted to 25% to fit new row) ---
-        Widget:
-            size_hint_y: 0.25
+<UpdatesSettingsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        TextInput:
+            text: root.log_text
+            readonly: True
+            background_color: 0, 0, 0, 1
+            foreground_color: 0, 1, 0, 1
+            font_size: self.height * 0.08 # Proportional font size
 
-        # --- BOTTOM BUTTON (15% Height) ---
-        Button:
-            text: "EXIT TO MAIN DISPLAY"
-            size_hint_y: 0.15
-            font_size: self.height * 0.5
-            on_release: 
-                root.manager.transition.direction = 'left'
-                root.manager.current = 'monitor'
+<AboutScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: [0, 5, 0, 0]
+        
+        BoxLayout:
+            orientation: 'horizontal'
+            padding: [10, 10]
+            spacing: 10
+            size_hint_y: 1
+
+            # LEFT: Text Content
+            ScrollView:
+                do_scroll_x: False
+                size_hint_x: 0.75
+                
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: 10
+                    
+                    Label:
+                        text: "App Brands"
+                        color: 1, 0.6, 0, 1 
+                        size_hint_y: None
+                        height: '40dp' 
+                        halign: 'left'
+                        text_size: self.size
+                        font_size: self.height * 0.6
+                        bold: True
+
+                    Label:
+                        text: "Keglevel Lite(c), KegLevel Monitor(c), KettleBrain(c), and FermVault(c) names, texts, UI/UX and program code are copyrighted.\nThis material and all components of this program are protected by copyright law.\nUnauthorized use, duplication, or distribution is strictly prohibited."
+                        bold: False
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        halign: 'left'
+                        color: 0.8, 0.8, 0.8, 1
+                        font_size: '14sp'
+
+                    Widget:
+                        size_hint_y: None
+                        height: 20
+
+                    Label:
+                        text: "Support This App"
+                        color: 1, 0.6, 0, 1 
+                        size_hint_y: None
+                        height: '40dp'
+                        halign: 'left'
+                        text_size: self.size
+                        font_size: self.height * 0.6
+                        bold: True
+
+                    Label:
+                        text: "This App took hundreds of hours to develop, test, and optimize.\nPlease consider supporting this App with a donation so continuous improvements can be made.\nIf you wish to receive customer support via email, please make a reasonable donation.\nCustomer support requests without a donation may not be considered."
+                        bold: False
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        halign: 'left'
+                        color: 0.8, 0.8, 0.8, 1
+                        font_size: '14sp'
+
+                    Widget:
+                        size_hint_y: None
+                        height: 20
+
+                    Label:
+                        text: "Acknowledgements"
+                        color: 1, 0.6, 0, 1 
+                        size_hint_y: None
+                        height: '40dp'
+                        halign: 'left'
+                        text_size: self.size
+                        font_size: self.height * 0.6
+                        bold: True
+
+                    Label:
+                        text: "Icons created by Pixel Perfect - Flaticon\nhttps://www.flaticon.com/free-icons/update"
+                        bold: False
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        text_size: self.width, None
+                        halign: 'left'
+                        color: 0.8, 0.8, 0.8, 1
+                        font_size: '14sp'
+
+            # RIGHT: Image
+            AnchorLayout:
+                anchor_x: 'right'
+                anchor_y: 'top'
+                size_hint_x: 0.25
+                size_hint_y: 1 
+                padding: [0, 10, 10, 0] 
+                
+                Image:
+                    source: 'assets/support.gif'
+                    size_hint: 1, None
+                    height: self.width
+                    allow_stretch: True
+                    keep_ratio: True
+
 <ChartScreen>:
     BoxLayout:
         orientation: 'vertical'

@@ -3,6 +3,9 @@ import os
 import json
 import csv
 import time
+import sys
+import threading
+import subprocess
 from datetime import datetime
 from random import uniform
 
@@ -106,30 +109,10 @@ if top is not None and left is not None:
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.core.window import Window
-from kivy.properties import ObjectProperty, StringProperty, NumericProperty, ListProperty
+from kivy.properties import ObjectProperty, StringProperty, NumericProperty, ListProperty, BooleanProperty
 from kivy.clock import Clock
-from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy_garden.graph import Graph, MeshLinePlot 
-
-class SettingsScreen(Screen):
-    pass
-
-# --- CUSTOM RESPONSIVE GRAPH ---
-class ResponsiveGraph(Graph):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._trigger_font_update = Clock.create_trigger(self.update_fonts, 0.1)
-        self.bind(height=self._trigger_font_update)
-        Clock.schedule_once(self.update_fonts, 0.5)
-        
-    def update_fonts(self, *args):
-        if self.height < 10: return
-        new_size = max(12, self.height * 0.05)
-        self.label_options = {
-            'color': [1, 1, 1, 1],
-            'bold': True,
-            'font_size': new_size
-        }
 
 # --- SENSOR HANDLING ---
 try:
@@ -149,16 +132,182 @@ except Exception:
         def get_temperature(self):
             return round(uniform(20.0, 30.0), 2)
 
+# --- CUSTOM RESPONSIVE GRAPH ---
+class ResponsiveGraph(Graph):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._trigger_font_update = Clock.create_trigger(self.update_fonts, 0.1)
+        self.bind(height=self._trigger_font_update)
+        Clock.schedule_once(self.update_fonts, 0.5)
+        
+    def update_fonts(self, *args):
+        if self.height < 10: return
+        new_size = max(12, self.height * 0.05)
+        self.label_options = {
+            'color': [1, 1, 1, 1],
+            'bold': True,
+            'font_size': new_size
+        }
+
+# --- SCREENS ---
 class MonitorScreen(Screen):
     pass
 
 class ChartScreen(Screen):
     pass
 
+# --- NEW TABBED SETTINGS SCREENS ---
+class SettingsMasterScreen(Screen):
+    btn_3_text = StringProperty("CHECK")
+    btn_3_visible = BooleanProperty(False)
+    
+    btn_4_text = StringProperty("RESTART")
+    btn_4_visible = BooleanProperty(False)
+    
+    current_tab = StringProperty('settings_general')
+
+    def select_tab(self, tab_name):
+        self.ids.content_manager.transition = SlideTransition(direction='left')
+        self.ids.content_manager.current = tab_name
+        self.current_tab = tab_name
+        
+        # Configure Footer based on Tab
+        if tab_name == 'settings_updates':
+            self.btn_3_visible = True
+            self.btn_4_text = "RESTART"
+            self.btn_4_visible = True
+        else:
+            self.btn_3_visible = False
+            self.btn_4_visible = False
+
+    def exit_settings(self):
+        self.manager.transition.direction = 'right'
+        self.manager.current = 'monitor'
+
+    def show_help(self):
+        print(f"[Settings] Help requested for {self.current_tab}")
+
+    def on_btn_3(self):
+        # Slot 3: CHECK / INSTALL
+        if self.current_tab == 'settings_updates':
+            screen = self.ids.content_manager.get_screen('settings_updates')
+            if self.btn_3_text == "CHECK":
+                screen.check_updates()
+            elif self.btn_3_text == "INSTALL":
+                screen.install_updates()
+
+    def on_btn_4(self):
+        # Slot 4: RESTART
+        if self.current_tab == 'settings_updates':
+            screen = self.ids.content_manager.get_screen('settings_updates')
+            screen.restart_app()
+
+class GeneralSettingsScreen(Screen):
+    pass
+
+class UpdatesSettingsScreen(Screen):
+    log_text = StringProperty("Ready to check for updates.\n")
+    is_working = BooleanProperty(False)
+    install_enabled = BooleanProperty(False)
+
+    def check_updates(self):
+        self.log_text = "Checking for updates...\n"
+        self.is_working = True
+        self.install_enabled = False
+        threading.Thread(target=self._run_update_process, args=(["--check"], True)).start()
+
+    def install_updates(self):
+        self.log_text += "\nStarting Install Process...\n"
+        self.is_working = True
+        self.install_enabled = False
+        threading.Thread(target=self._run_update_process, args=([], False)).start()
+
+    def _run_update_process(self, flags, is_check_mode):
+        src_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(src_dir)
+        script_path = os.path.join(project_root, "update.sh")
+
+        if not os.path.exists(script_path):
+            self._append_log(f"Error: Could not find script at:\n{script_path}")
+            self._finish_work(enable_install=False)
+            return
+
+        cmd = ["bash", script_path] + flags
+        try:
+            process = subprocess.Popen(
+                cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True, 
+                bufsize=1
+            )
+
+            update_available = False
+            
+            while True:
+                line = process.stdout.readline()
+                if not line and process.poll() is not None:
+                    break
+                if line:
+                    self._append_log(line)
+                    lower = line.lower()
+                    if "update available" in lower or "fast-forward" in lower or "file changed" in lower:
+                        update_available = True
+
+            return_code = process.poll()
+
+            if is_check_mode:
+                if update_available:
+                    self._append_log("\n[Check Complete] Updates available.")
+                    self._finish_work(enable_install=True)
+                else:
+                    self._append_log("\n[Check Complete] System is up to date.")
+                    self._finish_work(enable_install=False)
+            else:
+                if return_code == 0:
+                    self._append_log("\n[Success] Update installed. Please restart.")
+                else:
+                    self._append_log(f"\n[Failed] Process exited with code {return_code}")
+                self._finish_work(enable_install=False)
+
+        except Exception as e:
+            self._append_log(f"\n[Error] Exception running update: {e}")
+            self._finish_work(enable_install=False)
+
+    def _append_log(self, text):
+        Clock.schedule_once(lambda dt: self._update_log_text(text))
+
+    def _update_log_text(self, text):
+        self.log_text += text
+
+    def _finish_work(self, enable_install):
+        def _reset(dt):
+            self.is_working = False
+            self.install_enabled = enable_install
+            # Update parent button text
+            master = self.parent.parent
+            if enable_install:
+                master.btn_3_text = "INSTALL"
+            else:
+                master.btn_3_text = "CHECK"
+        Clock.schedule_once(_reset)
+
+    def restart_app(self):
+        print("[System] Restarting application...")
+        python = sys.executable
+        script = os.path.abspath(sys.argv[0])
+        args = sys.argv[1:]
+        cmd_args = [python, script] + args
+        os.execv(python, cmd_args)
+
+class AboutScreen(Screen):
+    pass
+
+
+# --- MAIN APP ---
 class TempMonitorApp(App):
     product_temp = StringProperty("--.-")
     ambient_temp = StringProperty("--.-")
-    # NEW: Range Properties
     product_range = StringProperty("Range: --.- - --.-")
     ambient_range = StringProperty("Range: --.- - --.-")
     
@@ -297,11 +446,20 @@ class TempMonitorApp(App):
         return f"{val:.1f}"
 
     def get_spinner_ids(self):
+        """Retrieves sensor IDs from the new General Settings tab"""
         if not self.root: return None, None
-        monitor_screen = self.root.get_screen('monitor')
-        prod_id = monitor_screen.ids.spinner_product.text
-        amb_id = monitor_screen.ids.spinner_ambient.text
-        return prod_id, amb_id
+        
+        try:
+            sys_settings = self.root.get_screen('sys_settings')
+            gen_screen = sys_settings.ids.content_manager.get_screen('settings_general')
+            prod_id = gen_screen.ids.spinner_product.text
+            amb_id = gen_screen.ids.spinner_ambient.text
+            return prod_id, amb_id
+        except Exception as e:
+            # Fallback for when the UI is still booting up and hasn't loaded the screen tree
+            default_prod = self.sensor_ids[0] if self.sensor_ids else "No Sensor"
+            default_amb = self.sensor_ids[1] if len(self.sensor_ids) > 1 else default_prod
+            return default_prod, default_amb
 
     def setup_graph(self):
         chart_screen = self.root.get_screen('chart')
@@ -477,14 +635,10 @@ class TempMonitorApp(App):
             graph.x_ticks_major = int(graph.xmax / 6)
             
         # 2. Update Y-Axis (if needed)
-        # Check all sensors to see if we breached the current view
-        # (This is more efficient than scanning the whole list every second)
         current_max_y = graph.ymax
         current_min_y = graph.ymin
         needs_y_update = False
         
-        # Collect recent plot values to check bounds
-        # We only check the ones we just added to keep it fast
         recent_values = []
         if self.plot_product.points: recent_values.append(self.plot_product.points[-1][1])
         if self.plot_ambient.points: recent_values.append(self.plot_ambient.points[-1][1])
