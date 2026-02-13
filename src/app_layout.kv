@@ -92,18 +92,18 @@ ScreenManager:
             spacing: 10
             
             Button:
-                text: "SETTINGS"
-                font_size: self.height * 0.5
-                on_release: 
-                    root.manager.transition.direction = 'right'
-                    root.manager.current = 'sys_settings'
-            
-            Button:
                 text: "CHART"
                 font_size: self.height * 0.5
                 on_release: 
                     root.manager.transition.direction = 'left'
                     root.manager.current = 'chart'
+
+            Button:
+                text: "SETTINGS"
+                font_size: self.height * 0.5
+                on_release: 
+                    root.manager.transition.direction = 'left'
+                    root.manager.current = 'sys_settings'
 
 # --- NEW TABBED SETTINGS MASTER ---
 <SettingsMasterScreen>:
