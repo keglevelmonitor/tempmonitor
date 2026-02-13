@@ -427,19 +427,29 @@ class TempMonitorApp(App):
             if self.root:
                 chart_screen = self.root.get_screen('chart')
                 graph = chart_screen.ids.main_graph
-                graph.xmin = 0
-                graph.xmax = 100
-                graph.x_ticks_major = int(graph.xmax / 6) # Reset X ticks
+                
+                # Reset bounds using actual current time
+                now_ts = datetime.now().timestamp()
+                graph.xmin = now_ts
+                graph.xmax = now_ts + 60
+                graph.x_ticks_major = max(1, (graph.xmax - graph.xmin) / 6) 
                 
                 graph.ymin = 0
                 graph.ymax = 40
-                graph.y_ticks_major = (graph.ymax - graph.ymin) / 6 # Reset Y ticks
+                graph.y_ticks_major = (graph.ymax - graph.ymin) / 6 
                 
             print("CSV Log Cleared.")
         except Exception as e:
             print(f"Error clearing CSV: {e}")
 
     # --- HELPERS ---
+    def format_unix_to_time(self, x_value):
+        """Converts Unix epoch float to HH:MM:SS for the graph X-axis labels."""
+        try:
+            return datetime.fromtimestamp(x_value).strftime('%H:%M:%S')
+        except Exception:
+            return ""
+    
     def get_temp_display(self, temp_c):
         """Converts C float to C or F string"""
         if self.units == 'F':
@@ -468,21 +478,26 @@ class TempMonitorApp(App):
         chart_screen = self.root.get_screen('chart')
         graph = chart_screen.ids.main_graph 
         
-        graph.xlabel = f'Time ({self.frequency_unit})' 
+        graph.xlabel = 'Time' 
         
         graph.y_grid_label = True
         graph.precision = '%0.0f' 
         graph.x_grid_label = True
         graph.x_ticks_minor = 0
         
+        # --- TRANSLATE EPOCH TO READABLE TIME ---
+        graph.x_func_label = self.format_unix_to_time
+        
         # --- DYNAMIC Y-AXIS (Start Default) ---
         graph.ymin = 0
         graph.ymax = 40
-        # Calculate ticks so we always have ~6 divisions
         graph.y_ticks_major = (graph.ymax - graph.ymin) / 6
         
         # --- DYNAMIC X-AXIS (Start Default) ---
-        graph.x_ticks_major = 20 
+        now_ts = datetime.now().timestamp()
+        graph.xmin = now_ts
+        graph.xmax = now_ts + 60  # 1 minute default buffer
+        graph.x_ticks_major = max(1, (graph.xmax - graph.xmin) / 6)
         
         # Reset plots
         for plot in graph.plots:
@@ -511,7 +526,6 @@ class TempMonitorApp(App):
                 with open(settings.csv_file, 'r') as f:
                     reader = csv.reader(f)
                     next(reader, None)
-                    start_time = None
                     
                     for row in reader:
                         if len(row) < 3: continue
@@ -521,9 +535,8 @@ class TempMonitorApp(App):
                             dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
                         except ValueError: continue
 
-                        if start_time is None: start_time = dt
-                        
-                        x_val = (dt - start_time).total_seconds() / self.time_factor
+                        # USE ABSOLUTE EPOCH TIMESTAMP FOR X-AXIS
+                        x_val = dt.timestamp()
                         
                         if self.units == 'F':
                             temp_val = (temp_val * 9/5) + 32
@@ -561,16 +574,19 @@ class TempMonitorApp(App):
                 graph = chart_screen.ids.main_graph
                 
                 # --- DYNAMIC SCALING (X & Y) ---
+                min_x = min(p[0] for p in all_pts)
                 max_x = max(p[0] for p in all_pts)
                 min_y = min(p[1] for p in all_pts)
                 max_y = max(p[1] for p in all_pts)
                 
-                graph.xmax = max(100, max_x + 10)
+                graph.xmin = min_x
+                # Ensure xmax is slightly ahead of the last point
+                graph.xmax = max(min_x + 60, max_x + (self.log_interval * self.time_factor))
                 graph.ymax = max_y + 5
                 graph.ymin = max(0, min_y - 5)
                 
                 # Dynamic Ticks: Always keep roughly 6 labels
-                graph.x_ticks_major = int(graph.xmax / 6)
+                graph.x_ticks_major = max(1, (graph.xmax - graph.xmin) / 6)
                 graph.y_ticks_major = (graph.ymax - graph.ymin) / 6
                 
         except Exception as e:
@@ -590,15 +606,13 @@ class TempMonitorApp(App):
 
     def log_data(self, dt=0):
         if not self.root: return
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_dt = datetime.now()
+        timestamp = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         prod_id, amb_id = self.get_spinner_ids()
         data_rows = []
         
-        current_x = 0
-        if self.plot_product.points:
-            current_x = self.plot_product.points[-1][0] + self.log_interval
-        elif self.plot_ambient.points:
-            current_x = self.plot_ambient.points[-1][0] + self.log_interval
+        # Use real-world absolute epoch time for the X-axis
+        current_x = now_dt.timestamp()
 
         for sensor in self.sensors:
             try:
@@ -632,10 +646,15 @@ class TempMonitorApp(App):
         chart_screen = self.root.get_screen('chart')
         graph = chart_screen.ids.main_graph
         
-        # 1. Update X-Axis (if needed)
+        # 1. Update X-Axis
         if current_x > graph.xmax:
-            graph.xmax = current_x + 20
-            graph.x_ticks_major = int(graph.xmax / 6)
+            graph.xmax = current_x + (self.log_interval * self.time_factor * 2) # Buffer ahead
+            
+        # If this is the very first point after a clear, snap xmin to it
+        if len(self.plot_product.points) + len(self.plot_ambient.points) <= 2:
+            graph.xmin = current_x - (self.log_interval * self.time_factor)
+
+        graph.x_ticks_major = max(1, (graph.xmax - graph.xmin) / 6)
             
         # 2. Update Y-Axis (if needed)
         current_max_y = graph.ymax

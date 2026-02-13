@@ -436,8 +436,13 @@ ScreenManager:
                 x_ticks_minor: 5
                 x_ticks_major: 25
                 y_ticks_major: 1
+                
+                # --- X & Y AXIS LABEL FORMATTING ---
+                x_grid_label: True
+                x_func_label: app.format_unix_to_time
                 y_grid_label: True
                 y_func_label: lambda x: "{:.1f}".format(x)
+                
                 padding: 5
                 x_grid: True
                 y_grid: True
@@ -459,7 +464,7 @@ ScreenManager:
                 on_release: 
                     root.manager.transition.direction = 'right'
                     root.manager.current = 'monitor'
-            
+             
             BoxLayout:
                 size_hint_x: 0.8
                 orientation: 'vertical'
