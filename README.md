@@ -4,10 +4,20 @@ The **TempMonitor** allows two DS18B20 temperature probes to monitor and track t
 
 Currently tested only on the Raspberry Pi 3B running Trixie and Bookworm. Should work with RPi4 and RPi5 running the same OS's but not yet tested.
 
-Please **donate $$** if you use the app. See "Support the app" on the Settings menu. 
+Please **donate $$** if you use the app. 
 
-There is also a **🔗 [Fermentation Vault Project](https://github.com/keglevelmonitor/fermvault)** project in the repository. The FermVault app monitors the temperature of a fermenting product (beer, wine, mead, etc.) inside a refrigerator or freezer. The app turns the refrigerator/freezer on or off, and optionally a heater on or off, to maintain a consistent fermentation temperature. The temperature of the fermenting product can be used as the control-to point. PID regulation ensures accurate temperature control with very little or no overshoot or undershoot of the setpoint temperature. Robust email notifications allow flexible remote monitoring and remote email control of the FermVault system. 
+![Support QR Code](src/assets/support.gif)
 
+## 💻 Suite of Apps for the Home Brewer
+**🔗 [KettleBrain Project](https://github.com/keglevelmonitor/kettlebrain)** An electric brewing kettle control system
+
+**🔗 [FermVault Project](https://github.com/keglevelmonitor/fermvault)** A fermentation chamber control system
+
+**🔗 [KegLevel Lite Project](https://github.com/keglevelmonitor/keglevel_lite)** A keg level monitoring system
+
+**🔗 [BatchFlow Project](https://github.com/keglevelmonitor/batchflow)** A homebrew batch management system
+
+**🔗 [TempMonitor Project](https://github.com/keglevelmonitor/tempmonitor)** A temperature monitoring and charting system
 
 
 ## To Install the TempMonitor App
@@ -51,30 +61,16 @@ Installed file structure:
 
 ```
 ~/tempmonitor/
-├── .gitignore
-├── install.sh
-├── tempmonitor.desktop
-├── [placeholder- LICENSE]
-├── README.md
-├── requirements.txt
-├── setup.sh
-├── uninstall.sh
-├── update.sh
-│
-├── src/
-│   ├── main.py
-│   ├── app-layout.kv
-│   │
-│   └── assets/
-│        ├── thermometer.png
-│
-├── venv/
-│   ├── (installed dependencies)
-│            
-└── data/
-    ├── tempmonitor_settings.json
-    └── templog.csv
+|-- utility files...
+|-- src/
+|   |-- application files...
+|   |-- assets/
+|       |-- supporting files...
+|-- venv/
+|   |-- python3 & dependencies
+~/tempmonitor-data/
+|-- user data...
     
-Required system-level dependencies are installed via sudo apt outside of venv
+Required system-level dependencies are installed via sudo apt outside of venv.
 
 ```
