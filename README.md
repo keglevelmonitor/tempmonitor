@@ -50,10 +50,10 @@ Here is a quick wiring diagram showing the logical connections of the system's c
 
 ## To uninstall the TempMonitor app
 
-To uninstall, open **Terminal** and run this command. Type carefully and use proper uppercase / lowercase because it matters:
+To uninstall, run the same install command. When the menu appears, select **UNINSTALL**:
 
 ```bash
-bash <(curl -sL https://bit.ly/uninstall-tempmonitor)
+bash <(curl -sL bit.ly/install-tempmonitor)
 ```
 
 ## ⚙️ For reference

@@ -8,40 +8,94 @@ DATA_DIR="$HOME/tempmonitor-data"
 WHAT_TO_INSTALL="TempMonitor Application and Data Directory"
 CLEANUP_MODE="NONE"
 
+# SAFETY CHECK: Ensure we are not running from inside the install dir
+CURRENT_DIR=$(pwd)
+if [[ "$CURRENT_DIR" == "$INSTALL_DIR"* ]]; then
+    echo "ERROR: You are running this script from inside the installation directory."
+    echo "Please move this script to your home folder ($HOME) and run it from there."
+    exit 1
+fi
+
 echo "========================================"
 echo "    TempMonitor Auto-Installer"
 echo "========================================"
 
 # 2. Logic to handle existing installs
 if [ -d "$INSTALL_DIR" ] || [ -d "$DATA_DIR" ]; then
-    echo ""
-    echo "Existing installation detected:"
-    [ -d "$INSTALL_DIR" ] && echo " - App Folder: $INSTALL_DIR"
-    [ -d "$DATA_DIR" ]    && echo " - Data Folder: $DATA_DIR"
-    echo ""
-    echo "How would you like to proceed? (Case Sensitive)"
-    echo "  APP  - Reinstall App only (Keeps your existing data/settings)"
-    echo "  ALL  - Reinstall App AND reset data (Fresh Install)"
-    echo "  EXIT - Cancel installation"
-    echo ""
-    read -p "Enter selection: " choice
-    
-    if [ "$choice" == "APP" ]; then
-        WHAT_TO_INSTALL="TempMonitor Application"
-        CLEANUP_MODE="APP"
-    elif [ "$choice" == "ALL" ]; then
-        WHAT_TO_INSTALL="TempMonitor Application and Data Directory"
-        CLEANUP_MODE="ALL"
-    else
-        echo "Cancelled."
-        exit 0
-    fi
+    while true; do
+        echo ""
+        echo "Existing installation detected:"
+        [ -d "$INSTALL_DIR" ] && echo " - App Folder: $INSTALL_DIR"
+        [ -d "$DATA_DIR" ]    && echo " - Data Folder: $DATA_DIR"
+        echo ""
+        echo "How would you like to proceed? (Case Sensitive)"
+        echo "  UPDATE    - Update the App (Git Pull) & Re-run install (Keeps data)"
+        echo "  APP       - Reinstall App only (Deletes App folder, Keeps data)"
+        echo "  ALL       - Reinstall App AND reset data (Fresh Install)"
+        echo "  UNINSTALL - Uninstall the app and the data directory"
+        echo "  EXIT      - Cancel"
+        echo ""
+        read -p "Enter selection: " choice
+        
+        if [ "$choice" == "UPDATE" ]; then
+            WHAT_TO_INSTALL="TempMonitor Update"
+            CLEANUP_MODE="NONE"
+            break
+        elif [ "$choice" == "APP" ]; then
+            WHAT_TO_INSTALL="TempMonitor Application (Fresh App, Keep Data)"
+            CLEANUP_MODE="APP"
+            break
+        elif [ "$choice" == "ALL" ]; then
+            WHAT_TO_INSTALL="TempMonitor Application and Data Directory (Fresh Install)"
+            CLEANUP_MODE="ALL"
+            break
+        elif [ "$choice" == "UNINSTALL" ]; then
+            echo "------------------------------------------"
+            echo "YOU ARE ABOUT TO DELETE:"
+            echo "The TempMonitor application AND all user data/settings."
+            echo "------------------------------------------"
+            echo ""
+            read -p "Type YES to UNINSTALL, or any other key to return: " confirm
+            
+            if [ "$confirm" == "YES" ]; then
+                echo ""
+                echo "Removing files..."
+                
+                DESKTOP_FILE="$HOME/.local/share/applications/tempmonitor.desktop"
+                if [ -f "$DESKTOP_FILE" ]; then
+                    rm "$DESKTOP_FILE"
+                    echo " - Removed desktop shortcut"
+                fi
+                if [ -d "$INSTALL_DIR" ]; then
+                    rm -rf "$INSTALL_DIR"
+                    echo " - Removed application directory: $INSTALL_DIR"
+                fi
+                if [ -d "$DATA_DIR" ]; then
+                    rm -rf "$DATA_DIR"
+                    echo " - Removed data directory: $DATA_DIR"
+                fi
+                
+                echo ""
+                echo "=========================================="
+                echo "   Uninstallation Complete"
+                echo "=========================================="
+                exit 0
+            else
+                echo "Uninstallation aborted."
+            fi
+        elif [ "$choice" == "EXIT" ]; then
+            echo "Cancelled."
+            exit 0
+        else
+            echo "Invalid selection."
+        fi
+    done
 fi
 
 # 3. Size Warning / Confirmation
 echo ""
 echo "------------------------------------------------------------"
-echo "This script will install the $WHAT_TO_INSTALL"
+echo "Processing: $WHAT_TO_INSTALL"
 echo "and will use about 350 MB of storage space (inc. Kivy deps)."
 echo "------------------------------------------------------------"
 echo ""
@@ -84,10 +138,11 @@ if ! command -v git &> /dev/null; then
     sudo apt-get update && sudo apt-get install -y git
 fi
 
-# 6. Clone Repo
+# 6. Clone Repo OR Update
 if [ -d "$INSTALL_DIR" ]; then
-    echo "Directory exists (Update mode)..."
+    echo "Directory exists. Updating via Git Pull..."
     cd "$INSTALL_DIR" || exit 1
+    git reset --hard
     git pull
 else
     echo "Cloning repository to $INSTALL_DIR..."
