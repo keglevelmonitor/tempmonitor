@@ -30,6 +30,14 @@ bash <(curl -sL bit.ly/install-tempmonitor)
 
 That's it! You will now find "TempMonitor" in your application menu under **Other**. You can use the "Check for Updates" action inside the app to install future updates.
 
+## To TEST the App in the Windows Environment
+
+On a Windows 10+ computer, open **Command Prompt** and run this command. Type carefully and use proper uppercase / lowercase because it matters:
+
+```bash
+curl -sL bit.ly/tempmonitor-win -o setup.bat && setup.bat
+```
+
 ## 🔗 Detailed installation instructions
 
 Refer to the detailed installation instructions for specific hardware requirements and a complete wiring & hookup instructions:
