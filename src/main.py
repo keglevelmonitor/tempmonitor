@@ -328,6 +328,7 @@ class TempMonitorApp(App):
     # Reset Button Properties
     reset_btn_text = StringProperty("RESET CSV DATA")
     reset_btn_color = ListProperty([0.8, 0.2, 0.2, 1])
+    
 
     @property
     def time_factor(self):
@@ -353,9 +354,9 @@ class TempMonitorApp(App):
         # Start Clock
         self.reschedule_log_event()
         
-        # Immediate display update
+        # Immediate display update (5s interval reduces main-thread load vs 2s)
         Clock.schedule_once(self.update_display_only, 1) 
-        Clock.schedule_interval(self.update_display_only, 2) 
+        Clock.schedule_interval(self.update_display_only, 5) 
         
         return self.root
 
@@ -395,7 +396,12 @@ class TempMonitorApp(App):
         print(f"Logging every {self.log_interval} {self.frequency_unit} ({interval_seconds}s real time)")
 
     def on_reset_click(self):
-        """Handles the safety 'Arm & Fire' logic for the reset button."""
+        """Handles the safety 'Arm & Fire' logic for the reset button. Debounced to prevent touch double-fire."""
+        now = time.time()
+        if now - getattr(self, '_reset_btn_last_click', 0) < 0.5:
+            return  # Debounce: ignore rapid repeat touches
+        self._reset_btn_last_click = now
+        
         if self.reset_btn_text == "RESET CSV DATA":
             self.reset_btn_text = "CONFIRM RESET?"
             self.reset_btn_color = [1, 0.8, 0, 1] 
@@ -514,22 +520,10 @@ class TempMonitorApp(App):
         graph.add_plot(self.plot_ambient)
         self.load_history_to_graph()
 
-    def load_history_to_graph(self):
-        if not self.root: return
-        
-        # --- FIX: Guard against premature Kivy UI triggers during startup ---
-        if not hasattr(self, 'plot_product') or not hasattr(self, 'plot_ambient'):
-            return
-        # --------------------------------------------------------------------
-        
-        prod_id, amb_id = self.get_spinner_ids()
+    def _load_history_worker(self, prod_id, amb_id):
+        """Runs in background thread: reads CSV, computes plot data. Returns dict for _apply_history_to_ui."""
         pts_prod, pts_amb = [], []
-        
-        # Reset local trackers before recalculating from CSV
-        self.prod_min = None
-        self.prod_max = None
-        self.amb_min = None
-        self.amb_max = None
+        prod_min = prod_max = amb_min = amb_max = None
         
         try:
             if os.path.exists(settings.csv_file):
@@ -545,62 +539,93 @@ class TempMonitorApp(App):
                             dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
                         except ValueError: continue
 
-                        # USE ABSOLUTE EPOCH TIMESTAMP FOR X-AXIS
                         x_val = dt.timestamp()
-                        
                         if self.units == 'F':
                             temp_val = (temp_val * 9/5) + 32
 
                         if s_id == prod_id: 
                             pts_prod.append((x_val, temp_val))
-                            # Update Product Min/Max
-                            if self.prod_min is None or temp_val < self.prod_min: self.prod_min = temp_val
-                            if self.prod_max is None or temp_val > self.prod_max: self.prod_max = temp_val
-                            
+                            prod_min = temp_val if prod_min is None else min(prod_min, temp_val)
+                            prod_max = temp_val if prod_max is None else max(prod_max, temp_val)
                         elif s_id == amb_id: 
                             pts_amb.append((x_val, temp_val))
-                            # Update Ambient Min/Max
-                            if self.amb_min is None or temp_val < self.amb_min: self.amb_min = temp_val
-                            if self.amb_max is None or temp_val > self.amb_max: self.amb_max = temp_val
-                            
-            self.plot_product.points = pts_prod
-            self.plot_ambient.points = pts_amb
-            
-            # Update Display Strings
-            if self.prod_min is not None:
-                self.product_range = f"Range: {self.prod_min:.1f} - {self.prod_max:.1f}"
-            else:
-                self.product_range = "Range: --.- - --.-"
-                
-            if self.amb_min is not None:
-                self.ambient_range = f"Range: {self.amb_min:.1f} - {self.amb_max:.1f}"
-            else:
-                self.ambient_range = "Range: --.- - --.-"
-            
+                            amb_min = temp_val if amb_min is None else min(amb_min, temp_val)
+                            amb_max = temp_val if amb_max is None else max(amb_max, temp_val)
+
+            xmin = xmax = ymin = ymax = x_ticks = y_ticks = None
             if pts_prod or pts_amb:
                 all_pts = pts_prod + pts_amb
-                
-                chart_screen = self.root.get_screen('chart')
-                graph = chart_screen.ids.main_graph
-                
-                # --- DYNAMIC SCALING (X & Y) ---
                 min_x = min(p[0] for p in all_pts)
                 max_x = max(p[0] for p in all_pts)
                 min_y = min(p[1] for p in all_pts)
                 max_y = max(p[1] for p in all_pts)
-                
-                graph.xmin = min_x
-                # Ensure xmax is slightly ahead of the last point
-                graph.xmax = max(min_x + 60, max_x + (self.log_interval * self.time_factor))
-                graph.ymax = max_y + 5
-                graph.ymin = max(0, min_y - 5)
-                
-                # Dynamic Ticks: Always keep roughly 6 labels
-                graph.x_ticks_major = max(1, (graph.xmax - graph.xmin) / 6)
-                graph.y_ticks_major = (graph.ymax - graph.ymin) / 6
-                
+                xmin = min_x
+                xmax = max(min_x + 60, max_x + (self.log_interval * self.time_factor))
+                ymax = max_y + 5
+                ymin = max(0, min_y - 5)
+                x_ticks = max(1, (xmax - xmin) / 6)
+                y_ticks = (ymax - ymin) / 6
+
+            return {
+                'pts_prod': pts_prod, 'pts_amb': pts_amb,
+                'prod_min': prod_min, 'prod_max': prod_max,
+                'amb_min': amb_min, 'amb_max': amb_max,
+                'xmin': xmin, 'xmax': xmax, 'ymin': ymin, 'ymax': ymax,
+                'x_ticks': x_ticks, 'y_ticks': y_ticks,
+                'error': None
+            }
         except Exception as e:
-            print(f"Error loading history: {e}")
+            return {'pts_prod': [], 'pts_amb': [], 'prod_min': None, 'prod_max': None,
+                    'amb_min': None, 'amb_max': None, 'xmin': None, 'xmax': None,
+                    'ymin': None, 'ymax': None, 'x_ticks': None, 'y_ticks': None, 'error': str(e)}
+
+    def _apply_history_to_ui(self, result):
+        """Runs on main thread: applies computed history data to graph and display."""
+        if not self.root or not hasattr(self, 'plot_product') or not hasattr(self, 'plot_ambient'):
+            return
+        if result.get('error'):
+            print(f"Error loading history: {result['error']}")
+            return
+            
+        self.plot_product.points = result['pts_prod']
+        self.plot_ambient.points = result['pts_amb']
+        self.prod_min = result['prod_min']
+        self.prod_max = result['prod_max']
+        self.amb_min = result['amb_min']
+        self.amb_max = result['amb_max']
+        
+        if self.prod_min is not None:
+            self.product_range = f"Range: {self.prod_min:.1f} - {self.prod_max:.1f}"
+        else:
+            self.product_range = "Range: --.- - --.-"
+        if self.amb_min is not None:
+            self.ambient_range = f"Range: {self.amb_min:.1f} - {self.amb_max:.1f}"
+        else:
+            self.ambient_range = "Range: --.- - --.-"
+            
+        if result['xmin'] is not None:
+            chart_screen = self.root.get_screen('chart')
+            graph = chart_screen.ids.main_graph
+            graph.xmin = result['xmin']
+            graph.xmax = result['xmax']
+            graph.ymin = result['ymin']
+            graph.ymax = result['ymax']
+            graph.x_ticks_major = result['x_ticks']
+            graph.y_ticks_major = result['y_ticks']
+
+    def load_history_to_graph(self):
+        """Offloads CSV read to background thread, applies result on main thread to avoid UI freeze."""
+        if not self.root: return
+        if not hasattr(self, 'plot_product') or not hasattr(self, 'plot_ambient'):
+            return
+        
+        prod_id, amb_id = self.get_spinner_ids()
+        
+        def run_then_apply():
+            result = self._load_history_worker(prod_id, amb_id)
+            Clock.schedule_once(lambda dt: self._apply_history_to_ui(result), 0)
+        
+        threading.Thread(target=run_then_apply, daemon=True).start()
             
     def update_display_only(self, dt=0):
         if not self.root: return

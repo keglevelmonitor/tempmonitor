@@ -1,6 +1,24 @@
 #:import Graph kivy_garden.graph.Graph
 #:import ResponsiveGraph __main__.ResponsiveGraph
+#:import Window kivy.core.window.Window
+#:import Factory kivy.factory.Factory
 
+# --- TOUCH-OPTIMIZED WIDGETS (ScaledSpinnerOption for dropdown options) ---
+<ScaledSpinnerOption@SpinnerOption>:
+    font_size: Window.height * 0.035
+    bold: True
+    height: Window.height * 0.085
+
+<ScaledSpinner@Spinner>:
+    font_size: Window.height * 0.04
+    bold: True
+    option_cls: Factory.get("ScaledSpinnerOption")
+    background_normal: ''
+    background_color: 0.3, 0.3, 0.3, 1
+
+<FlatButton@Button>:
+    background_normal: ''
+    bold: True
 
 ScreenManager:
     id: screen_manager
@@ -92,16 +110,18 @@ ScreenManager:
             size_hint_y: 0.15
             spacing: 10
             
-            Button:
+            FlatButton:
                 text: "CHART"
                 font_size: self.height * 0.5
+                background_color: 0.4, 0.4, 0.4, 1
                 on_release: 
                     root.manager.transition.direction = 'left'
                     root.manager.current = 'chart'
 
-            Button:
+            FlatButton:
                 text: "SETTINGS"
                 font_size: self.height * 0.5
+                background_color: 0.4, 0.4, 0.4, 1
                 on_release: 
                     root.manager.transition.direction = 'left'
                     root.manager.current = 'sys_settings'
@@ -168,33 +188,29 @@ ScreenManager:
             spacing: 10
             padding: [0, 5, 0, 0]
 
-            Button:
+            FlatButton:
                 text: "EXIT"
                 font_size: self.height * 0.5
-                bold: True
                 background_color: 0.5, 0.5, 0.5, 1
                 on_release: root.exit_settings()
 
-            Button:
+            FlatButton:
                 text: "HELP"
                 font_size: self.height * 0.5
-                bold: True
                 background_color: 0.3, 0.3, 0.3, 1
                 on_release: root.show_help()
 
-            Button:
+            FlatButton:
                 text: root.btn_3_text
                 font_size: self.height * 0.5
-                bold: True
                 disabled: not root.btn_3_visible
                 opacity: 1 if root.btn_3_visible else 0
                 background_color: 0.2, 0.4, 0.8, 1
                 on_release: root.on_btn_3()
 
-            Button:
+            FlatButton:
                 text: root.btn_4_text
                 font_size: self.height * 0.5
-                bold: True
                 disabled: not root.btn_4_visible
                 opacity: 1 if root.btn_4_visible else 0
                 background_color: 0.8, 0.4, 0.2, 1
@@ -217,7 +233,7 @@ ScreenManager:
                 halign: 'right'
                 valign: 'middle'
                 font_size: self.height * 0.5
-            Spinner:
+            ScaledSpinner:
                 size_hint_x: 0.5
                 text: "Celsius" if app.units == 'C' else "Fahrenheit"
                 values: ["Celsius", "Fahrenheit"]
@@ -235,7 +251,7 @@ ScreenManager:
                 halign: 'right'
                 valign: 'middle'
                 font_size: self.height * 0.5
-            Spinner:
+            ScaledSpinner:
                 size_hint_x: 0.5
                 text: "Minutes" if app.frequency_unit == 'min' else "Seconds"
                 values: ["Minutes", "Seconds"]
@@ -253,7 +269,7 @@ ScreenManager:
                 halign: 'right'
                 valign: 'middle'
                 font_size: self.height * 0.5
-            Spinner:
+            ScaledSpinner:
                 id: spinner_product
                 size_hint_x: 0.5
                 text: app.sensor_ids[0] if app.sensor_ids else "No Sensor"
@@ -272,7 +288,7 @@ ScreenManager:
                 halign: 'right'
                 valign: 'middle'
                 font_size: self.height * 0.5
-            Spinner:
+            ScaledSpinner:
                 id: spinner_ambient
                 size_hint_x: 0.5
                 text: app.sensor_ids[1] if len(app.sensor_ids) > 1 else (app.sensor_ids[0] if app.sensor_ids else "No Sensor")
@@ -291,7 +307,7 @@ ScreenManager:
                 halign: 'right'
                 valign: 'middle'
                 font_size: self.height * 0.5
-            Button:
+            FlatButton:
                 size_hint_x: 0.5
                 text: app.reset_btn_text
                 background_color: app.reset_btn_color
@@ -458,10 +474,11 @@ ScreenManager:
             size_hint_y: 0.15
             spacing: 20
             
-            Button:
+            FlatButton:
                 text: "EXIT"
                 size_hint_x: 0.2
                 font_size: self.height * 0.5
+                background_color: 0.4, 0.4, 0.4, 1
                 on_release: 
                     root.manager.transition.direction = 'right'
                     root.manager.current = 'monitor'
