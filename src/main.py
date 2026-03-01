@@ -475,12 +475,23 @@ class UpdatesSettingsScreen(Screen):
         Clock.schedule_once(_reset)
 
     def restart_app(self):
+        """Save settings before restart (os.execv bypasses on_stop)."""
+        app = App.get_running_app()
+        settings.set('window_width', Window.width)
+        settings.set('window_height', Window.height)
+        settings.set('window_top', Window.top)
+        settings.set('window_left', Window.left)
+        settings.set('log_interval', app.log_interval)
+        settings.set('units', app.units)
+        settings.set('frequency_unit', app.frequency_unit)
+        settings.set('product_label', app.product_label)
+        settings.set('ambient_label', app.ambient_label)
+        settings.save()
         print("[System] Restarting application...")
         python = sys.executable
         script = os.path.abspath(sys.argv[0])
         args = sys.argv[1:]
-        cmd_args = [python, script] + args
-        os.execv(python, cmd_args)
+        os.execv(python, [python, script] + args)
 
 class AboutScreen(Screen):
     pass
