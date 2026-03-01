@@ -120,6 +120,7 @@ from kivy.properties import ObjectProperty, StringProperty, NumericProperty, Lis
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.popup import Popup
+from math import log10
 from kivy_garden.graph import Graph, MeshLinePlot 
 
 # --- SENSOR HANDLING (sysfs, same as FermVault - no w1thermsensor dependency) ---
@@ -159,21 +160,150 @@ def detect_ds18b20_sensors():
     return [os.path.basename(f) for f in device_folders]
 
 # --- CUSTOM RESPONSIVE GRAPH ---
+def _graph_identity(x):
+    return x
+
+
+def _graph_exp10(x):
+    return 10 ** x
+
+
 class ResponsiveGraph(Graph):
+    """Graph subclass that supports x_func_label for custom x-axis formatting."""
+    x_func_label = ObjectProperty(None, allownone=True)
+    y_func_label = ObjectProperty(None, allownone=True)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._trigger_font_update = Clock.create_trigger(self.update_fonts, 0.1)
-        self.bind(height=self._trigger_font_update)
+        self.bind(height=self._trigger_font_update, x_func_label=self._trigger, y_func_label=self._trigger)
         Clock.schedule_once(self.update_fonts, 0.5)
-        
+
     def update_fonts(self, *args):
-        if self.height < 10: return
+        if self.height < 10:
+            return
         new_size = max(12, self.height * 0.05)
         self.label_options = {
             'color': [1, 1, 1, 1],
             'bold': True,
             'font_size': new_size
         }
+
+    def _get_x_label_text(self, x_val, precision, funcexp):
+        """Returns formatted x-axis label: use x_func_label if set, else precision."""
+        if self.x_func_label:
+            try:
+                return str(self.x_func_label(x_val))
+            except Exception:
+                pass
+        return precision % funcexp(x_val)
+
+    def _update_labels(self):
+        """Override to use x_func_label when set for x-axis formatting."""
+        xlabel = self._xlabel
+        ylabel = self._ylabel
+        x = self.x
+        y = self.y
+        width = self.width
+        height = self.height
+        padding = self.padding
+        x_next = padding + x
+        y_next = padding + y
+        xextent = width + x
+        yextent = height + y
+        ymin = self.ymin
+        ymax = self.ymax
+        xmin = self.xmin
+        precision = self.precision
+        x_overlap = False
+        y_overlap = False
+
+        if xlabel:
+            xlabel.text = self.xlabel
+            xlabel.texture_update()
+            xlabel.size = xlabel.texture_size
+            xlabel.pos = (int(x + width / 2. - xlabel.width / 2.), int(padding + y))
+            y_next += padding + xlabel.height
+        if ylabel:
+            ylabel.text = self.ylabel
+            ylabel.texture_update()
+            ylabel.size = ylabel.texture_size
+            ylabel.x = padding + x - (ylabel.width / 2. - ylabel.height / 2.)
+            y_next += padding + ylabel.height
+
+        xpoints = self._ticks_majorx
+        xlabels = self._x_grid_label
+        xlabel_grid = self.x_grid_label
+        ylabel_grid = self.y_grid_label
+        ypoints = self._ticks_majory
+        ylabels = self._y_grid_label
+
+        funcexp_y = _graph_exp10 if self.ylog else _graph_identity
+        funclog_y = log10 if self.ylog else _graph_identity
+        if len(ylabels) and ylabel_grid:
+            ylabels[0].text = precision % funcexp_y(ypoints[0])
+            ylabels[0].texture_update()
+            y1 = ylabels[0].texture_size
+            y_start = y_next + (padding + y1[1] if len(xlabels) and xlabel_grid else 0) + (padding + y1[1] if not y_next else 0)
+            yextent = y + height - padding - y1[1] / 2.
+            ymin_l = funclog_y(ymin)
+            ratio_y = (yextent - y_start) / float(funclog_y(ymax) - ymin_l)
+            y_start -= y1[1] / 2.
+            y1_w = y1[0]
+            for k in range(len(ylabels)):
+                yval = funcexp_y(ypoints[k])
+                if self.y_func_label and callable(self.y_func_label):
+                    ytext = str(self.y_func_label(yval))
+                else:
+                    ytext = precision % yval
+                ylabels[k].text = ytext
+                ylabels[k].texture_update()
+                ylabels[k].size = ylabels[k].texture_size
+                y1_w = max(y1_w, ylabels[k].texture_size[0])
+                ylabels[k].pos = (int(x_next), int(y_start + (ypoints[k] - ymin_l) * ratio_y))
+            if len(ylabels) > 1 and ylabels[0].top > ylabels[1].y:
+                y_overlap = True
+            else:
+                x_next += y1_w + padding
+
+        funcexp_x = _graph_exp10 if self.xlog else _graph_identity
+        funclog_x = log10 if self.xlog else _graph_identity
+        if len(xlabels) and xlabel_grid:
+            xlabels[0].text = self._get_x_label_text(xpoints[-1], precision, funcexp_x)
+            xlabels[0].texture_update()
+            xextent = x + width - xlabels[0].texture_size[0] / 2. - padding
+            if not x_next:
+                xlabels[0].text = self._get_x_label_text(xpoints[0], precision, funcexp_x)
+                xlabels[0].texture_update()
+                x_next = padding + xlabels[0].texture_size[0] / 2.
+            xmin_l = funclog_x(xmin)
+            ratio_x = (xextent - x_next) / float(funclog_x(self.xmax) - xmin_l)
+            right = -1
+            for k in range(len(xlabels)):
+                xlabels[k].text = self._get_x_label_text(xpoints[k], precision, funcexp_x)
+                xlabels[k].texture_update()
+                xlabels[k].size = xlabels[k].texture_size
+                half_ts = xlabels[k].texture_size[0] / 2.
+                xlabels[k].pos = (int(x_next + (xpoints[k] - xmin_l) * ratio_x - half_ts), int(y_next))
+                if xlabels[k].x < right:
+                    x_overlap = True
+                    break
+                right = xlabels[k].right
+            if not x_overlap:
+                y_next += padding + xlabels[0].texture_size[1]
+
+        if xlabel:
+            xlabel.x = int(x_next + (xextent - x_next) / 2. - xlabel.width / 2.)
+        if ylabel:
+            ylabel.y = int(y_next + (yextent - y_next) / 2. - ylabel.height / 2.)
+            ylabel.angle = 90
+        if x_overlap:
+            for k in range(len(xlabels)):
+                xlabels[k].text = ''
+        if y_overlap:
+            for k in range(len(ylabels)):
+                ylabels[k].text = ''
+        return x_next - x, y_next - y, xextent - x, yextent - y
 
 # --- EDIT LABEL POPUP ---
 class EditLabelPopup(Popup):
@@ -529,9 +659,9 @@ class TempMonitorApp(App):
 
     # --- HELPERS ---
     def format_unix_to_time(self, x_value):
-        """Converts Unix epoch float to HH:MM:SS for the graph X-axis labels."""
+        """Converts Unix epoch float to dd/mm hh:mm for the graph X-axis labels."""
         try:
-            return datetime.fromtimestamp(x_value).strftime('%H:%M:%S')
+            return datetime.fromtimestamp(x_value).strftime('%d/%m %H:%M')
         except Exception:
             return ""
     
