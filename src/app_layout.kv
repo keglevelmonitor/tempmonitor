@@ -21,6 +21,45 @@
     background_normal: ''
     bold: True
 
+# Hero label tap target (looks like label, opens edit popup)
+<HeroLabelButton@Button>:
+    background_normal: ''
+    background_color: 0, 0, 0, 0
+    color: 1, 1, 1, 1
+
+<EditLabelPopup>:
+    size_hint: 0.85, 0.35
+    auto_dismiss: False
+    BoxLayout:
+        orientation: 'vertical'
+        padding: Window.height * 0.04
+        spacing: Window.height * 0.03
+        Label:
+            text: "Max 15 characters"
+            size_hint_y: None
+            height: Window.height * 0.04
+            color: 0.7, 0.7, 0.7, 1
+        TextInput:
+            id: label_input
+            multiline: False
+            size_hint_y: None
+            height: Window.height * 0.1
+            padding: 10, 10
+            font_size: Window.height * 0.04
+        BoxLayout:
+            orientation: 'horizontal'
+            spacing: Window.height * 0.024
+            size_hint_y: None
+            height: Window.height * 0.08
+            FlatButton:
+                text: "Cancel"
+                background_color: 0.5, 0.5, 0.5, 1
+                on_release: root.dismiss()
+            FlatButton:
+                text: "Save"
+                background_color: 0.2, 0.8, 0.2, 1
+                on_release: root.on_save()
+
 ScreenManager:
     id: screen_manager
     MonitorScreen:
@@ -52,11 +91,15 @@ ScreenManager:
                         pos: self.pos
                         size: self.size
                 
-                Label:
-                    text: "PRODUCT"
+                HeroLabelButton:
+                    text: app.product_label
                     size_hint_y: 0.15
                     font_size: self.height * 0.5
-                    color: 1, 1, 1, 1
+                    text_size: self.size
+                    halign: 'center'
+                    valign: 'middle'
+                    ellipsize: 'end'
+                    on_release: app.open_edit_label_popup('product')
                 
                 Label:
                     text: app.product_temp
@@ -84,11 +127,15 @@ ScreenManager:
                         pos: self.pos
                         size: self.size
                 
-                Label:
-                    text: "AMBIENT"
+                HeroLabelButton:
+                    text: app.ambient_label
                     size_hint_y: 0.15
                     font_size: self.height * 0.5
-                    color: 1, 1, 1, 1
+                    text_size: self.size
+                    halign: 'center'
+                    valign: 'middle'
+                    ellipsize: 'end'
+                    on_release: app.open_edit_label_popup('ambient')
                 
                 Label:
                     text: app.ambient_temp

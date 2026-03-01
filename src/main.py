@@ -30,7 +30,9 @@ class SettingsManager:
             'units': 'C',          # 'C' or 'F'
             'frequency_unit': 'min', # 'sec' or 'min'
             'log_interval': 5,     
-            'sensor_map': {}      
+            'sensor_map': {},
+            'product_label': 'PRODUCT',
+            'ambient_label': 'AMBIENT',
         }
         self.data = self.defaults.copy()
         self.load()
@@ -116,6 +118,7 @@ from kivy.core.window import Window
 from kivy.properties import ObjectProperty, StringProperty, NumericProperty, ListProperty, BooleanProperty
 from kivy.clock import Clock
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.uix.popup import Popup
 from kivy_garden.graph import Graph, MeshLinePlot 
 
 # --- SENSOR HANDLING ---
@@ -152,6 +155,29 @@ class ResponsiveGraph(Graph):
             'bold': True,
             'font_size': new_size
         }
+
+# --- EDIT LABEL POPUP ---
+class EditLabelPopup(Popup):
+    """Popup for editing hero card labels. Max 15 chars."""
+    MAX_LABEL_LEN = 15
+
+    def __init__(self, app, card_type, **kwargs):
+        super().__init__(**kwargs)
+        self.app = app
+        self.card_type = card_type  # 'product' or 'ambient'
+        self.title = f"Edit {card_type.title()} Label"
+
+    def on_open(self):
+        current = getattr(self.app, f'{self.card_type}_label', '')
+        self.ids.label_input.text = current
+        self.ids.label_input.focus = True
+
+    def on_save(self):
+        text = (self.ids.label_input.text or '').strip()[:self.MAX_LABEL_LEN]
+        if not text:
+            text = 'PRODUCT' if self.card_type == 'product' else 'AMBIENT'
+        self.app._apply_label_edit(self.card_type, text)
+        self.dismiss()
 
 # --- SCREENS ---
 class MonitorScreen(Screen):
@@ -329,6 +355,9 @@ class TempMonitorApp(App):
     reset_btn_text = StringProperty("RESET CSV DATA")
     reset_btn_color = ListProperty([0.8, 0.2, 0.2, 1])
     
+    # Hero card labels (user-editable)
+    product_label = StringProperty(settings.get('product_label'))
+    ambient_label = StringProperty(settings.get('ambient_label'))
 
     @property
     def time_factor(self):
@@ -369,6 +398,25 @@ class TempMonitorApp(App):
         settings.set('log_interval', self.log_interval)
         settings.set('units', self.units)
         settings.set('frequency_unit', self.frequency_unit)
+        settings.set('product_label', self.product_label)
+        settings.set('ambient_label', self.ambient_label)
+        settings.save()
+
+    # --- HERO LABEL EDIT ---
+    def open_edit_label_popup(self, card_type):
+        """Opens popup to edit product or ambient hero label. card_type: 'product' or 'ambient'."""
+        if card_type not in ('product', 'ambient'):
+            return
+        popup = EditLabelPopup(app=self, card_type=card_type)
+        popup.open()
+
+    def _apply_label_edit(self, card_type, new_text):
+        """Applies edited label from popup. Validates max 15 chars."""
+        text = (new_text or '').strip()[:EditLabelPopup.MAX_LABEL_LEN]
+        if not text:
+            text = 'PRODUCT' if card_type == 'product' else 'AMBIENT'
+        setattr(self, f'{card_type}_label', text)
+        settings.set(f'{card_type}_label', text)
         settings.save()
 
     # --- SETTINGS HANDLERS ---
