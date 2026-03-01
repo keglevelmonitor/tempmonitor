@@ -693,7 +693,7 @@ class TempMonitorApp(App):
         chart_screen = self.root.get_screen('chart')
         graph = chart_screen.ids.main_graph 
         
-        graph.xlabel = 'Time' 
+        graph.xlabel = '' 
         
         graph.y_grid_label = True
         graph.precision = '%0.0f' 
