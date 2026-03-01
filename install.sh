@@ -64,7 +64,7 @@ if [ -f "$PROJECT_DIR/requirements.txt" ]; then
     "$VENV_PYTHON_EXEC" -m pip install -r "$PROJECT_DIR/requirements.txt"
 else
     echo "WARNING: requirements.txt not found. Installing default Kivy..."
-    "$VENV_PYTHON_EXEC" -m pip install kivy[full] kivy_garden.graph w1thermsensor matplotlib
+    "$VENV_PYTHON_EXEC" -m pip install kivy[full] kivy_garden.graph matplotlib
 fi
 
 if [ $? -ne 0 ]; then

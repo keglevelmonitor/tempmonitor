@@ -1,9 +1,10 @@
 #!/usr/bin/env python3 
 import os
+import sys
 import json
 import csv
 import time
-import sys
+import glob
 import threading
 import subprocess
 from datetime import datetime
@@ -121,23 +122,41 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.uix.popup import Popup
 from kivy_garden.graph import Graph, MeshLinePlot 
 
-# --- SENSOR HANDLING ---
-try:
-    from w1thermsensor import W1ThermSensor
-    if not W1ThermSensor.get_available_sensors():
-        raise ImportError("No sensors found")
-    IS_RASPBERRY_PI = True
-except Exception:
-    IS_RASPBERRY_PI = False
-    print("Using MOCK SENSORS")
-    class W1ThermSensor:
-        def __init__(self, sensor_id=None):
-            self.id = sensor_id or "28-00000TEST"
-        @staticmethod
-        def get_available_sensors():
-            return [W1ThermSensor("28-MockProd"), W1ThermSensor("28-MockAmb")]
-        def get_temperature(self):
-            return round(uniform(20.0, 30.0), 2)
+# --- SENSOR HANDLING (sysfs, same as FermVault - no w1thermsensor dependency) ---
+MOCK_SENSOR_IDS = ["28-MockProd", "28-MockAmb"]
+
+
+def _read_temp_c_from_id(sensor_id):
+    """Reads temperature in Celsius from DS18B20 via sysfs. Returns None on error."""
+    if not sensor_id or sensor_id in ('unassigned', 'No Sensor'):
+        return None
+    if sys.platform == 'win32':
+        return round(uniform(20.0, 30.0), 2)
+    device_file = f'/sys/bus/w1/devices/{sensor_id}/w1_slave'
+    if not os.path.exists(device_file):
+        return None
+    try:
+        with open(device_file, 'r') as f:
+            lines = f.readlines()
+        if len(lines) < 2 or lines[0].strip()[-3:] != 'YES':
+            return None
+        equals_pos = lines[1].find('t=')
+        if equals_pos != -1:
+            temp_string = lines[1][equals_pos+2:]
+            return round(float(temp_string) / 1000.0, 2)
+    except Exception as e:
+        print(f"TempMonitor: Error reading sensor {sensor_id}: {e}")
+    return None
+
+
+def detect_ds18b20_sensors():
+    """Returns list of DS18B20 sensor IDs (or mock IDs on Windows)."""
+    if sys.platform == 'win32':
+        print("Using MOCK SENSORS")
+        return list(MOCK_SENSOR_IDS)
+    base_dir = '/sys/bus/w1/devices/'
+    device_folders = glob.glob(base_dir + '28-*')
+    return [os.path.basename(f) for f in device_folders]
 
 # --- CUSTOM RESPONSIVE GRAPH ---
 class ResponsiveGraph(Graph):
@@ -368,9 +387,8 @@ class TempMonitorApp(App):
         settings.ensure_data_dir()
         self.root = Builder.load_file('app_layout.kv')
         
-        # Initialize Sensors
-        self.sensors = W1ThermSensor.get_available_sensors()
-        self.sensor_ids = [s.id for s in self.sensors]
+        # Initialize Sensors (sysfs, same method as FermVault)
+        self.sensor_ids = detect_ds18b20_sensors()
         
         # Initialize Range Trackers
         self.prod_min = None
@@ -687,14 +705,17 @@ class TempMonitorApp(App):
     def update_display_only(self, dt=0):
         if not self.root: return
         prod_id, amb_id = self.get_spinner_ids()
-        for sensor in self.sensors:
+        for sensor_id in self.sensor_ids:
             try:
-                temp_c = sensor.get_temperature()
-                if sensor.id == prod_id: 
+                temp_c = _read_temp_c_from_id(sensor_id)
+                if temp_c is None:
+                    continue
+                if sensor_id == prod_id:
                     self.product_temp = self.get_temp_display(temp_c)
-                elif sensor.id == amb_id: 
+                elif sensor_id == amb_id:
                     self.ambient_temp = self.get_temp_display(temp_c)
-            except: pass
+            except Exception:
+                pass
 
     def log_data(self, dt=0):
         if not self.root: return
@@ -702,27 +723,29 @@ class TempMonitorApp(App):
         timestamp = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         prod_id, amb_id = self.get_spinner_ids()
         data_rows = []
-        
+
         # Use real-world absolute epoch time for the X-axis
         current_x = now_dt.timestamp()
 
-        for sensor in self.sensors:
+        for sensor_id in self.sensor_ids:
             try:
-                temp_c = sensor.get_temperature()
-                data_rows.append([timestamp, sensor.id, temp_c])
-                
+                temp_c = _read_temp_c_from_id(sensor_id)
+                if temp_c is None:
+                    continue
+                data_rows.append([timestamp, sensor_id, temp_c])
+
                 plot_val = temp_c
                 if self.units == 'F':
                     plot_val = (temp_c * 9/5) + 32
 
-                if sensor.id == prod_id:
+                if sensor_id == prod_id:
                     self.plot_product.points.append((current_x, plot_val))
                     # Live Update Product Min/Max
                     if self.prod_min is None or plot_val < self.prod_min: self.prod_min = plot_val
                     if self.prod_max is None or plot_val > self.prod_max: self.prod_max = plot_val
                     self.product_range = f"Range: {self.prod_min:.1f} - {self.prod_max:.1f}"
                     
-                elif sensor.id == amb_id:
+                elif sensor_id == amb_id:
                     self.plot_ambient.points.append((current_x, plot_val))
                     # Live Update Ambient Min/Max
                     if self.amb_min is None or plot_val < self.amb_min: self.amb_min = plot_val

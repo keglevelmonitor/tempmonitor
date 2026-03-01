@@ -1,5 +1,4 @@
 kivy[full]
 kivy_garden.graph
-# DS18B20 1-Wire sensors (Linux only - app uses mock sensors on Windows)
-w1thermsensor; sys_platform == 'linux'
+# DS18B20 read via Linux sysfs (same as FermVault) - no extra package needed
 matplotlib
