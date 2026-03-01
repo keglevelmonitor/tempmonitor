@@ -389,6 +389,15 @@ class TempMonitorApp(App):
         
         return self.root
 
+    def on_start(self):
+        """Called after build() when the window is ready. Schedule splash dismissal."""
+        Clock.schedule_once(self.dismiss_splash, 0.5)
+
+    def dismiss_splash(self, dt):
+        """Kills the splash screen after the main UI is visible."""
+        if hasattr(self, 'splash_queue'):
+            self.splash_queue.put("STOP")
+
     def on_stop(self):
         """Save settings on exit."""
         settings.set('window_width', Window.width)
@@ -762,5 +771,62 @@ class TempMonitorApp(App):
     def refresh_graph_mapping(self):
         self.load_history_to_graph()
 
+
+def run_splash_screen(queue):
+    """
+    Runs a standalone Tkinter loading dialog in a separate process.
+    This appears immediately, independent of Kivy's loading time.
+    """
+    import tkinter as tk
+
+    try:
+        root = tk.Tk()
+        root.overrideredirect(True)
+        root.attributes('-topmost', True)
+
+        width = 300
+        height = 80
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        root.geometry(f'{width}x{height}+{x}+{y}')
+        root.configure(bg='#222222')
+
+        frame = tk.Frame(root, bg='#222222', highlightbackground='#FFC107', highlightthickness=2)
+        frame.pack(fill='both', expand=True)
+
+        lbl = tk.Label(frame, text="TempMonitor app loading...", font=("Arial", 16, "bold"), fg="#FFC107", bg="#222222")
+        lbl.pack(expand=True)
+
+        root.update()
+
+        def check_kill():
+            if not queue.empty():
+                root.destroy()
+            else:
+                root.after(100, check_kill)
+
+        root.after(100, check_kill)
+        root.mainloop()
+    except Exception as e:
+        print(f"Splash screen error: {e}")
+
+
 if __name__ == '__main__':
-    TempMonitorApp().run()
+    import multiprocessing
+
+    splash_queue = multiprocessing.Queue()
+    splash_process = multiprocessing.Process(target=run_splash_screen, args=(splash_queue,))
+    splash_process.start()
+
+    try:
+        app = TempMonitorApp()
+        app.splash_queue = splash_queue
+        app.run()
+    except KeyboardInterrupt:
+        print("\nTempMonitor App interrupted by user.")
+    finally:
+        if splash_process.is_alive():
+            splash_process.terminate()
