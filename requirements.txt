@@ -1,4 +1,5 @@
 kivy[full]
 kivy_garden.graph
-w1thermsensor
+# DS18B20 1-Wire sensors (Linux only - app uses mock sensors on Windows)
+w1thermsensor; sys_platform == 'linux'
 matplotlib
