@@ -10,6 +10,7 @@ import subprocess
 from datetime import datetime
 from random import uniform
 
+# testing settings persistence
 # --- 1. SETTINGS MANAGER & CONFIGURATION ---
 class SettingsManager:
     def __init__(self):
