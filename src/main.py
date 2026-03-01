@@ -41,7 +41,7 @@ class SettingsManager:
     def load(self):
         if os.path.exists(self.settings_file):
             try:
-                with open(self.settings_file, 'r') as f:
+                with open(self.settings_file, 'r', encoding='utf-8') as f:
                     saved = json.load(f)
                     self.data.update(saved)
             except Exception as e:
@@ -50,7 +50,7 @@ class SettingsManager:
     def save(self):
         self.ensure_data_dir()
         try:
-            with open(self.settings_file, 'w') as f:
+            with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(self.data, f, indent=4)
             print(f"Settings saved.")
         except Exception as e:
@@ -66,7 +66,7 @@ class SettingsManager:
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
         if not os.path.exists(self.csv_file):
-            with open(self.csv_file, 'w', newline='') as f:
+            with open(self.csv_file, 'w', newline='', encoding='utf-8') as f:
                 csv.writer(f).writerow(['timestamp', 'sensor_id', 'temperature'])
 
 # Instantiate Global Manager
@@ -625,7 +625,7 @@ class TempMonitorApp(App):
     def clear_csv_data(self):
         """Wipes the CSV file and resets the graph."""
         try:
-            with open(settings.csv_file, 'w', newline='') as f:
+            with open(settings.csv_file, 'w', newline='', encoding='utf-8') as f:
                 csv.writer(f).writerow(['timestamp', 'sensor_id', 'temperature'])
             
             self.plot_product.points = []
@@ -732,7 +732,7 @@ class TempMonitorApp(App):
         
         try:
             if os.path.exists(settings.csv_file):
-                with open(settings.csv_file, 'r') as f:
+                with open(settings.csv_file, 'r', encoding='utf-8') as f:
                     reader = csv.reader(f)
                     next(reader, None)
                     
@@ -884,7 +884,7 @@ class TempMonitorApp(App):
                     
             except: pass
         
-        with open(settings.csv_file, 'a', newline='') as f:
+        with open(settings.csv_file, 'a', newline='', encoding='utf-8') as f:
             csv.writer(f).writerows(data_rows)
             
         # --- DYNAMIC UPDATE ---
