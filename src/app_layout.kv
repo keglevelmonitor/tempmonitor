@@ -5,9 +5,14 @@
 
 # --- TOUCH-OPTIMIZED WIDGETS (ScaledSpinnerOption for dropdown options) ---
 <ScaledSpinnerOption@SpinnerOption>:
+    size_hint_x: None
+    width: Window.width * 0.30
     font_size: Window.height * 0.035
     bold: True
     height: Window.height * 0.085
+    text_size: self.size
+    halign: 'left'
+    valign: 'middle'
 
 <ScaledSpinner@Spinner>:
     font_size: Window.height * 0.04
