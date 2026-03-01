@@ -23,8 +23,8 @@ class SettingsManager:
         
         # Default Settings
         self.defaults = {
-            'window_width': 480,
-            'window_height': 258,
+            'window_width': 800,
+            'window_height': 418,
             'window_top': None,
             'window_left': None,
             'units': 'C',          # 'C' or 'F'
@@ -82,8 +82,8 @@ icon_path = os.path.join(current_dir, 'assets', 'thermometer.png')
 Config.set('kivy', 'window_icon', icon_path)
 
 # Safety Check: If window is too small, reset to default
-min_w = 480
-min_h = 258
+min_w = 800
+min_h = 418
 safe_w = settings.get('window_width')
 safe_h = settings.get('window_height')
 

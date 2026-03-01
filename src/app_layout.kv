@@ -32,13 +32,13 @@ ScreenManager:
 <MonitorScreen>:
     BoxLayout:
         orientation: 'vertical'
-        padding: 10
-        spacing: 10
+        padding: Window.height * 0.024
+        spacing: Window.height * 0.024
         
         # --- HERO AREA ---
         BoxLayout:
             orientation: 'horizontal'
-            spacing: 10
+            spacing: Window.height * 0.024
             size_hint_y: 0.85 
             
             # PRODUCT CARD
@@ -108,7 +108,7 @@ ScreenManager:
         # --- MAIN CONTROLS ---
         BoxLayout:
             size_hint_y: 0.15
-            spacing: 10
+            spacing: Window.height * 0.024
             
             FlatButton:
                 text: "CHART"
@@ -130,8 +130,8 @@ ScreenManager:
 <SettingsMasterScreen>:
     BoxLayout:
         orientation: 'vertical'
-        padding: 5
-        spacing: 5
+        padding: Window.height * 0.012
+        spacing: Window.height * 0.012
         canvas.before:
             Color:
                 rgba: 0.1, 0.1, 0.1, 1
@@ -142,7 +142,7 @@ ScreenManager:
         # --- 1. TOP TABS (15% Height) ---
         BoxLayout:
             size_hint_y: 0.15
-            spacing: 2
+            spacing: Window.height * 0.005
             
             ToggleButton:
                 text: "GENERAL"
@@ -185,8 +185,8 @@ ScreenManager:
         # --- 3. FOOTER BUTTONS (15% Height) ---
         BoxLayout:
             size_hint_y: 0.15
-            spacing: 10
-            padding: [0, 5, 0, 0]
+            spacing: Window.height * 0.024
+            padding: 0, Window.height * 0.012, 0, 0
 
             FlatButton:
                 text: "EXIT"
@@ -219,13 +219,13 @@ ScreenManager:
 <GeneralSettingsScreen>:
     BoxLayout:
         orientation: 'vertical'
-        padding: [10, 0, 10, 0]
-        spacing: 5
+        padding: Window.height * 0.024, 0, Window.height * 0.024, 0
+        spacing: Window.height * 0.012
         
         # ROW 1: TEMP UNITS
         BoxLayout:
             size_hint_y: 0.2
-            spacing: 10
+            spacing: Window.height * 0.024
             Label:
                 text: "Temp Units:"
                 size_hint_x: 0.5
@@ -243,7 +243,7 @@ ScreenManager:
         # ROW 2: LOG UNITS
         BoxLayout:
             size_hint_y: 0.2
-            spacing: 10
+            spacing: Window.height * 0.024
             Label:
                 text: "Log Units:"
                 size_hint_x: 0.5
@@ -261,7 +261,7 @@ ScreenManager:
         # ROW 3: SENSOR PRODUCT
         BoxLayout:
             size_hint_y: 0.2
-            spacing: 10
+            spacing: Window.height * 0.024
             Label:
                 text: "Product Sensor:"
                 size_hint_x: 0.5
@@ -280,7 +280,7 @@ ScreenManager:
         # ROW 4: SENSOR AMBIENT
         BoxLayout:
             size_hint_y: 0.2
-            spacing: 10
+            spacing: Window.height * 0.024
             Label:
                 text: "Ambient Sensor:"
                 size_hint_x: 0.5
@@ -299,7 +299,7 @@ ScreenManager:
         # ROW 5: RESET LOG
         BoxLayout:
             size_hint_y: 0.2
-            spacing: 10
+            spacing: Window.height * 0.024
             Label:
                 text: "Reset Data Log:"
                 size_hint_x: 0.5
@@ -317,7 +317,7 @@ ScreenManager:
 <UpdatesSettingsScreen>:
     BoxLayout:
         orientation: 'vertical'
-        padding: 10
+        padding: Window.height * 0.024
         TextInput:
             text: root.log_text
             readonly: True
@@ -328,12 +328,12 @@ ScreenManager:
 <AboutScreen>:
     BoxLayout:
         orientation: 'vertical'
-        padding: [0, 5, 0, 0]
+        padding: 0, Window.height * 0.012, 0, 0
         
         BoxLayout:
             orientation: 'horizontal'
-            padding: [10, 10]
-            spacing: 10
+            padding: Window.height * 0.024
+            spacing: Window.height * 0.024
             size_hint_y: 1
 
             # LEFT: Text Content
@@ -345,13 +345,13 @@ ScreenManager:
                     orientation: 'vertical'
                     size_hint_y: None
                     height: self.minimum_height
-                    spacing: 10
+                    spacing: Window.height * 0.024
                     
                     Label:
                         text: "App Brands"
                         color: 1, 0.6, 0, 1 
                         size_hint_y: None
-                        height: '40dp' 
+                        height: Window.height * 0.096
                         halign: 'left'
                         text_size: self.size
                         font_size: self.height * 0.6
@@ -365,17 +365,17 @@ ScreenManager:
                         text_size: self.width, None
                         halign: 'left'
                         color: 0.8, 0.8, 0.8, 1
-                        font_size: '14sp'
+                        font_size: Window.height * 0.034
 
                     Widget:
                         size_hint_y: None
-                        height: 20
+                        height: Window.height * 0.048
 
                     Label:
                         text: "Support This App"
                         color: 1, 0.6, 0, 1 
                         size_hint_y: None
-                        height: '40dp'
+                        height: Window.height * 0.096
                         halign: 'left'
                         text_size: self.size
                         font_size: self.height * 0.6
@@ -389,17 +389,17 @@ ScreenManager:
                         text_size: self.width, None
                         halign: 'left'
                         color: 0.8, 0.8, 0.8, 1
-                        font_size: '14sp'
+                        font_size: Window.height * 0.034
 
                     Widget:
                         size_hint_y: None
-                        height: 20
+                        height: Window.height * 0.048
 
                     Label:
                         text: "Acknowledgements"
                         color: 1, 0.6, 0, 1 
                         size_hint_y: None
-                        height: '40dp'
+                        height: Window.height * 0.096
                         halign: 'left'
                         text_size: self.size
                         font_size: self.height * 0.6
@@ -413,7 +413,7 @@ ScreenManager:
                         text_size: self.width, None
                         halign: 'left'
                         color: 0.8, 0.8, 0.8, 1
-                        font_size: '14sp'
+                        font_size: Window.height * 0.034
 
             # RIGHT: Image
             AnchorLayout:
@@ -421,7 +421,7 @@ ScreenManager:
                 anchor_y: 'top'
                 size_hint_x: 0.25
                 size_hint_y: 1 
-                padding: [0, 10, 10, 0] 
+                padding: 0, Window.height * 0.024, Window.height * 0.024, 0 
                 
                 Image:
                     source: 'assets/support.gif'
@@ -433,8 +433,8 @@ ScreenManager:
 <ChartScreen>:
     BoxLayout:
         orientation: 'vertical'
-        padding: 10
-        spacing: 10
+        padding: Window.height * 0.024
+        spacing: Window.height * 0.024
 
         # --- GRAPH AREA ---
         BoxLayout:
@@ -460,7 +460,7 @@ ScreenManager:
                 y_grid_label: True
                 y_func_label: lambda x: "{:.1f}".format(x)
                 
-                padding: 5
+                padding: Window.height * 0.012
                 x_grid: True
                 y_grid: True
                 xmin: 0
@@ -472,7 +472,7 @@ ScreenManager:
         # --- CONTROL AREA ---
         BoxLayout:
             size_hint_y: 0.15
-            spacing: 20
+            spacing: Window.height * 0.048
             
             FlatButton:
                 text: "EXIT"
