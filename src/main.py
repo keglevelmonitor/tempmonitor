@@ -659,9 +659,9 @@ class TempMonitorApp(App):
 
     # --- HELPERS ---
     def format_unix_to_time(self, x_value):
-        """Converts Unix epoch float to dd/mm hh:mm for the graph X-axis labels."""
+        """Converts Unix epoch float to Mon-dd hh:mm for the graph X-axis labels."""
         try:
-            return datetime.fromtimestamp(x_value).strftime('%d/%m %H:%M')
+            return datetime.fromtimestamp(x_value).strftime('%b-%d %H:%M')
         except Exception:
             return ""
     
