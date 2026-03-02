@@ -1,4 +1,5 @@
 #!/usr/bin/env python3 
+# test for update function with windows deployment
 import os
 import sys
 import json
